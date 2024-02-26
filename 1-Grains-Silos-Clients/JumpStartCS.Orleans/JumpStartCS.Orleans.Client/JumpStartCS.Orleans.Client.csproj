@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Client" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JumpStartCS.Orleans.Grains\JumpStartCS.Orleans.Grains.csproj" />
+  </ItemGroup>
+
+</Project>
