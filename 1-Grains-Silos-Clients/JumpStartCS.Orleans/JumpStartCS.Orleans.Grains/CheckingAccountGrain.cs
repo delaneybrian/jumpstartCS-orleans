@@ -1,12 +1,12 @@
-﻿using Orleans;
-
-namespace JumpStartCS.Orleans.Grains
+﻿namespace JumpStartCS.Orleans.Grains
 {
-    internal class CheckingAccountGrain : Grain, ICheckingAccountGrain
+    public class CheckingAccountGrain : Grain, ICheckingAccountGrain
     {
-        public async Task LogBalance()
+        public async Task<int> GetBalance()
         {
             Console.WriteLine("80 is the balance");
+
+            return 80;
         }
     }
 }
