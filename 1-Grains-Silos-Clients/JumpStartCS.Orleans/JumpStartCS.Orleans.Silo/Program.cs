@@ -1,18 +1,17 @@
-﻿using Orleans.Configuration;
-using Orleans.Hosting;
+﻿using Microsoft.Extensions.Hosting;
+using Orleans.Configuration;
 
-var builder = new SiloHostBuilder()
-            .UseLocalhostClustering()
-            .Configure<ClusterOptions>(options =>
-            {
-                options.ClusterId = "dev";
-                options.ServiceId = "HelloWorldApp";
-            });
+await Host.CreateDefaultBuilder(args)
+    .UseOrleans(siloBuilder =>
+    {
+        siloBuilder.Configure<ClusterOptions > (options =>
+                    {
+                        options.ClusterId = "JumpstartCSCluster";
+                        options.ServiceId = "JumpstartCSService";
+                    });
 
-var host = builder.Build();
-await host.StartAsync();
-
-Console.WriteLine("Press Enter to terminate...");
-Console.ReadLine();
-
-await host.StopAsync();
+        siloBuilder.UseLocalhostClustering(
+            //siloPort: 30000, gatewayPort: 30001
+            ); 
+    })
+    .RunConsoleAsync();

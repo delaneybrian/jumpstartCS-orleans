@@ -9,6 +9,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="3.7.1" />
+    <PackageReference Include="Microsoft.Orleans.Server" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JumpStartCS.Orleans.Grains\JumpStartCS.Orleans.Grains.csproj" />
   </ItemGroup>
 
 </Project>
