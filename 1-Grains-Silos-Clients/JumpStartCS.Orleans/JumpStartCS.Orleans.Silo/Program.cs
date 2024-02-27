@@ -11,7 +11,7 @@ await Host.CreateDefaultBuilder(args)
                     });
 
         siloBuilder.UseLocalhostClustering(
-            //siloPort: 30000, gatewayPort: 30001
+            siloPort: 30000, gatewayPort: 30001
             ); 
     })
     .RunConsoleAsync();
