@@ -10,8 +10,9 @@ await Host.CreateDefaultBuilder(args)
                         options.ServiceId = "JumpstartCSService";
                     });
 
-        siloBuilder.UseLocalhostClustering(
-            siloPort: 30000, gatewayPort: 30001
-            ); 
+        siloBuilder.AddMemoryGrainStorage(name: "accountStore");
+        siloBuilder.AddMemoryGrainStorage(name: "customerStore");
+
+        siloBuilder.UseLocalhostClustering(siloPort: 30000, gatewayPort: 30001); 
     })
     .RunConsoleAsync();

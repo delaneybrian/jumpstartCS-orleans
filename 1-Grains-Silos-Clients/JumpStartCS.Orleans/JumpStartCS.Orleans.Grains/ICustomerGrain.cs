@@ -2,6 +2,12 @@
 {
     public interface ICustomerGrain : IGrainWithStringKey
     {
-        Task<int> GetCustomerCheckingAccountBalance();
+        Task AddCustomerDetails(string name);
+
+        Task DebitAccount(Guid accountId, int debitAmount);
+
+        Task<int> GetCustomerCheckingAccountBalance(Guid checkingAccountId);
+
+        Task<string> GetCustomerDetails();
     }
 }

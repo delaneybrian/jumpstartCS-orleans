@@ -3,5 +3,7 @@
     public interface ICheckingAccountGrain : IGrainWithGuidKey
     {
         Task<int> GetBalance();
+
+        Task DebitBalance(int debitAmount);
     }
 }

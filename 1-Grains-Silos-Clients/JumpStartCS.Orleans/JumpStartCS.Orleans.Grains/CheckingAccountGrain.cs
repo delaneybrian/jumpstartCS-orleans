@@ -1,12 +1,27 @@
-﻿namespace JumpStartCS.Orleans.Grains
+﻿using JumpStartCS.Orleans.Grains.State;
+using Orleans.Runtime;
+
+namespace JumpStartCS.Orleans.Grains
 {
     public class CheckingAccountGrain : Grain, ICheckingAccountGrain
     {
+        private readonly IPersistentState<CheckingAccountState> _checkingAccountState;
+
+        public CheckingAccountGrain([PersistentState("checkingAccount", "accountStore")] IPersistentState<CheckingAccountState> checkingAccountState)
+        {
+            _checkingAccountState = checkingAccountState;
+        }
+
         public async Task<int> GetBalance()
         {
-            Console.WriteLine("80 is the balance");
+            return _checkingAccountState.State.Balance;
+        }
 
-            return 80;
+        public async Task DebitBalance(int debitAmount)
+        {
+            _checkingAccountState.State.Balance = _checkingAccountState.State.Balance + debitAmount;
+
+            await _checkingAccountState.WriteStateAsync();
         }
     }
 }

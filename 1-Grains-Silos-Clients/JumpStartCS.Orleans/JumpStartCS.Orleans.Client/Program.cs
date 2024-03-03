@@ -1,5 +1,4 @@
 using JumpStartCS.Orleans.Grains;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Orleans.Configuration;
 
@@ -8,9 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseOrleansClient((context, client) =>
 {
 
-    client.UseLocalhostClustering(
-        gatewayPort: 30001
-        );
+    client.UseLocalhostClustering(gatewayPort: 30001);
 
     client.Configure<ClusterOptions>(options =>
     {
@@ -35,17 +32,49 @@ builder.Host.UseOrleansClient((context, client) =>
 
 var app = builder.Build();
 
+app.MapGet("customers/{customerId}", async (
+    string customerId,
+    IClusterClient clusterClient) => {
 
-app.MapGet("/", async (IClusterClient clusterClient) => {
+        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
 
-    var customerId = Guid.NewGuid().ToString();
+        var details = await customerGrain.GetCustomerDetails();
+
+        return TypedResults.Ok(details);
+    });
+
+app.MapGet("customers/{customerId}/accounts/{accountId}", async (
+    string customerId, 
+    Guid accountId, 
+    IClusterClient clusterClient) => {
 
     var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
 
-    var balance = await customerGrain.GetCustomerCheckingAccountBalance();
+    var balance = await customerGrain.GetCustomerCheckingAccountBalance(accountId);
 
-    return balance;
+    return TypedResults.Ok(balance);
 
 });
+
+app.MapPost("customers/{customerId}", async (
+    [FromBody] string name,
+    string customerId,
+    IClusterClient clusterClient) => {
+
+        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+
+        await customerGrain.AddCustomerDetails(name);
+    });
+
+app.MapPost("customers/{customerId}/accounts/{accountId}", async (
+    [FromBody] int debitAmount,
+    string customerId,
+    Guid accountId,
+    IClusterClient clusterClient) => {
+
+        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+
+        await customerGrain.DebitAccount(accountId, debitAmount);
+    });
 
 app.Run();
