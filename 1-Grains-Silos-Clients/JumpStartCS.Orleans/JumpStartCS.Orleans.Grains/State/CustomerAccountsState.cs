@@ -7,8 +7,5 @@ namespace JumpStartCS.Orleans.Grains.State
     {
         [DataMember]
         public ICollection<Guid> CheckingAccountIds { get; set; } = new HashSet<Guid>();
-
-        [DataMember]
-        public ICollection<Guid> SavingsAccountIds { get; set; } = new HashSet<Guid>();
     }
 }

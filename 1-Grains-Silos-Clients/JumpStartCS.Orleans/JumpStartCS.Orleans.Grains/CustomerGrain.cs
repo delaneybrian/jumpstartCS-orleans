@@ -1,4 +1,5 @@
 ﻿using JumpStartCS.Orleans.Grains.State;
+using JumpStartCS.Orleans.Infrastructure;
 using Orleans.Runtime;
 
 namespace JumpStartCS.Orleans.Grains
@@ -8,16 +9,19 @@ namespace JumpStartCS.Orleans.Grains
         private readonly IGrainFactory _grainFactory;
         private readonly IPersistentState<CustomerDetailsState> _customerDetailsState;
         private readonly IPersistentState<CustomerAccountsState> _customerAccountsState;
+        private readonly IAnalyticsService _analyticsService;
 
         public CustomerGrain(
             [PersistentState("customerDetails", "customerStore")] IPersistentState<CustomerDetailsState> customerDetailsState,
             [PersistentState("customerAccounts", "customerStore")] IPersistentState<CustomerAccountsState> customerAccountsState,
-            IGrainFactory grainFactory)
+            IGrainFactory grainFactory,
+            IAnalyticsService analyticsService)
         {
             _customerDetailsState = customerDetailsState;
             _customerAccountsState = customerAccountsState;
 
             _grainFactory = grainFactory;
+            _analyticsService = analyticsService;
         }
 
         public async Task AddCustomerDetails(string name)
@@ -25,6 +29,8 @@ namespace JumpStartCS.Orleans.Grains
             _customerDetailsState.State.Name = name;
 
             await _customerAccountsState.WriteStateAsync();
+
+            await _analyticsService.UploadAnalytics();
         }
 
         public async Task DebitAccount(Guid accountId, int debitAmount)
