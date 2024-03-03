@@ -4,7 +4,7 @@ using Orleans.Runtime;
 
 namespace JumpStartCS.Orleans.Grains
 {
-    public class CustomerGrain : Grain, ICustomerGrain
+    public class CustomerGrain : Grain, ICustomerGrain, IRemindable
     {
         private readonly IGrainFactory _grainFactory;
         private readonly IPersistentState<CustomerDetailsState> _customerDetailsState;
@@ -57,6 +57,30 @@ namespace JumpStartCS.Orleans.Grains
         public async Task<string> GetCustomerDetails()
         {
             return _customerDetailsState.State.Name;
+        }
+
+        public async Task StartReminder(string reminderName)
+        {
+            await this.RegisterOrUpdateReminder(reminderName, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
+
+        public async Task StartTimer(string timerName)
+        {
+            RegisterTimer(
+                OnTimerExecute,
+                timerName, 
+                TimeSpan.FromSeconds(5), 
+                TimeSpan.FromSeconds(5));
+        }
+
+        public async Task ReceiveReminder(string reminderName, TickStatus status)
+        {
+            Console.WriteLine($"Execuring reminder {reminderName}");
+        }
+
+        private async Task OnTimerExecute(object state)
+        {
+            Console.WriteLine($"Timer: {state} running");
         }
     }
 }

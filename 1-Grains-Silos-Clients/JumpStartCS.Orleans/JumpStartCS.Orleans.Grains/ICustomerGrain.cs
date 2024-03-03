@@ -9,5 +9,9 @@
         Task<int> GetCustomerCheckingAccountBalance(Guid checkingAccountId);
 
         Task<string> GetCustomerDetails();
+
+        Task StartTimer(string timerName);
+
+        Task StartReminder(string reminderName);
     }
 }

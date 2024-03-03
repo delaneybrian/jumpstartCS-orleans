@@ -1,4 +1,5 @@
 using JumpStartCS.Orleans.Grains;
+using JumpStartCS.Orleans.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Orleans.Configuration;
 
@@ -16,6 +17,9 @@ builder.Host.UseOrleansClient((context, client) =>
     });
 
 });
+
+//Add if we want to use analytics service in a ASP.NET hosted silo
+//builder.Services.AddSingleton<IAnalyticsService, AnalyticsService>();
 
 //builder.Host.UseOrleans(siloBuilder =>
 //{
@@ -55,6 +59,26 @@ app.MapGet("customers/{customerId}/accounts/{accountId}", async (
     return TypedResults.Ok(balance);
 
 });
+
+app.MapPost("customers/{customerId}/starttimer", async(
+    [FromBody] string timerName,
+    string customerId,
+    IClusterClient clusterClient) => {
+
+        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+
+        await customerGrain.StartTimer(timerName);
+    });
+
+app.MapPost("customers/{customerId}/startReminder", async (
+    [FromBody] string reminderName,
+    string customerId,
+    IClusterClient clusterClient) => {
+
+        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+
+        await customerGrain.StartReminder(reminderName);
+    });
 
 app.MapPost("customers/{customerId}", async (
     [FromBody] string name,
