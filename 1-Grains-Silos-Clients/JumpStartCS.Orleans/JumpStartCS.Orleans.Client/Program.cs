@@ -1,13 +1,13 @@
+using JumpStartCS.Orleans.Client.Contracts;
 using JumpStartCS.Orleans.Grains;
+using JumpStartCS.Orleans.Grains.Abstractions;
 using JumpStartCS.Orleans.Infrastructure;
-using Microsoft.AspNetCore.Mvc;
 using Orleans.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseOrleansClient((context, client) =>
 {
-
     client.UseLocalhostClustering(gatewayPort: 30001);
 
     client.Configure<ClusterOptions>(options =>
@@ -15,11 +15,10 @@ builder.Host.UseOrleansClient((context, client) =>
         options.ClusterId = "JumpstartCSCluster";
         options.ServiceId = "JumpstartCSService";
     });
-
 });
 
 //Add if we want to use analytics service in a ASP.NET hosted silo
-//builder.Services.AddSingleton<IAnalyticsService, AnalyticsService>();
+builder.Services.AddSingleton<IComplianceService, ComplianceService>();
 
 //builder.Host.UseOrleans(siloBuilder =>
 //{
@@ -36,69 +35,92 @@ builder.Host.UseOrleansClient((context, client) =>
 
 var app = builder.Build();
 
-app.MapGet("customers/{customerId}", async (
-    string customerId,
+app.MapGet("checkingaccount/{checkingAccountId}/balance", async (
+    Guid checkingAccountId,
     IClusterClient clusterClient) => {
 
-        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+        var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-        var details = await customerGrain.GetCustomerDetails();
+        var balance = await checkingAccountGrain.GetBalance();
 
-        return TypedResults.Ok(details);
+        return TypedResults.Ok(balance);
     });
 
-app.MapGet("customers/{customerId}/accounts/{accountId}", async (
-    string customerId, 
-    Guid accountId, 
+app.MapPost("checkingaccount", async (
+    CreateAccount createAccount,
     IClusterClient clusterClient) => {
 
-    var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+        var checkingAccountId = Guid.NewGuid();
 
-    var balance = await customerGrain.GetCustomerCheckingAccountBalance(accountId);
+        var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-    return TypedResults.Ok(balance);
+        await checkingAccountGrain.Initialise(createAccount.OpeningBalance, createAccount.CustomerId);
 
+        return TypedResults.Created($"checkingAccount/{checkingAccountId}", checkingAccountId);
+    });
+
+app.MapPost("checkingaccount/{checkingAccountId}/debit", async (
+    Guid checkingAccountId,
+    Debit debit,
+    IClusterClient clusterClient) => {
+
+        var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
+
+        await checkingAccountGrain.Debit(debit.Amount);
+
+        return TypedResults.NoContent();
+    });
+
+app.MapPost("checkingaccount/{checkingAccountId}/credit", async (
+    Guid checkingAccountId, 
+    Credit credit, 
+    IClusterClient clusterClient) => {
+
+        var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
+
+        await checkingAccountGrain.Credit(credit.Amount);
+
+        return TypedResults.NoContent();
 });
 
-app.MapPost("customers/{customerId}/starttimer", async(
-    [FromBody] string timerName,
-    string customerId,
+app.MapPost("checkingaccount/{checkingAccountId}/reccuringPayment", async (
+    Guid checkingAccountId,
+    CreateRecurringPayment createRecurringPayment,
     IClusterClient clusterClient) => {
 
-        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+        var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-        await customerGrain.StartTimer(timerName);
+        await checkingAccountGrain.ScheduleRecurringPayment(
+            createRecurringPayment.Id, 
+            createRecurringPayment.Amount, 
+            createRecurringPayment.ReccursEveryMinute);
+
+        return TypedResults.NoContent();
     });
 
-app.MapPost("customers/{customerId}/startReminder", async (
-    [FromBody] string reminderName,
-    string customerId,
-    IClusterClient clusterClient) => {
+app.MapPost("atm", async (
+    CreateAtm createAtm,
+    IClusterClient clusterClient) =>
+{
+    var atmId = Guid.NewGuid();
 
-        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+    var atmGrain = clusterClient.GetGrain<IAtmGrain>(atmId);
 
-        await customerGrain.StartReminder(reminderName);
-    });
+    await atmGrain.Initialise(createAtm.OpeningBalance);
 
-app.MapPost("customers/{customerId}", async (
-    [FromBody] string name,
-    string customerId,
-    IClusterClient clusterClient) => {
+    return TypedResults.Created($"atm/{atmId}", atmId);
+});
 
-        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+app.MapPost("atm/{atmId}/withdrawl", async (
+    Guid atmId,
+    AtmWithdrawl atmWithdrawl,
+    IClusterClient clusterClient) =>
+{
+    var atmGrain = clusterClient.GetGrain<IAtmGrain>(atmId);
 
-        await customerGrain.AddCustomerDetails(name);
-    });
+    await atmGrain.Withdraw(atmWithdrawl.CheckingAccountId, atmWithdrawl.WithdrawlAmount);
 
-app.MapPost("customers/{customerId}/accounts/{accountId}", async (
-    [FromBody] int debitAmount,
-    string customerId,
-    Guid accountId,
-    IClusterClient clusterClient) => {
-
-        var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
-
-        await customerGrain.DebitAccount(accountId, debitAmount);
-    });
+    return TypedResults.NoContent();
+});
 
 app.Run();

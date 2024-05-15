@@ -3,9 +3,12 @@
 namespace JumpStartCS.Orleans.Grains.State
 {
     [DataContract]
-    public record CustomerAccountsState
+    public record AtmState
     {
         [DataMember]
-        public ICollection<Guid> CheckingAccountIds { get; set; } = new HashSet<Guid>();
+        public Guid Id { get; init; }
+
+        [DataMember]
+        public decimal Balance { get; init; }
     }
 }

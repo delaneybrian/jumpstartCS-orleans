@@ -1,15 +1,15 @@
 ﻿using JumpStartCS.Orleans.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 
 await Host.CreateDefaultBuilder(args)
     .UseOrleans(siloBuilder =>
     {
+        siloBuilder.UseLocalhostClustering(siloPort: 30000, gatewayPort: 30001);
+
         siloBuilder.Configure<ClusterOptions> (options =>
                     {
-
                         options.ClusterId = "JumpstartCSCluster";
                         options.ServiceId = "JumpstartCSService";
                     });
@@ -22,8 +22,19 @@ await Host.CreateDefaultBuilder(args)
             options.CollectionAge = TimeSpan.FromSeconds(30);
         });
 
-        siloBuilder.AddMemoryGrainStorage(name: "accountStore");
-        siloBuilder.AddMemoryGrainStorage(name: "customerStore");
+        siloBuilder.AddMemoryGrainStorage(name: "memoryStorage");
+
+        siloBuilder.AddAzureTableGrainStorage(
+            name: "tableStorage",
+            configureOptions: options =>
+            {
+                options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
+            });
+
+        siloBuilder.UseAzureTableGrainDirectoryAsDefault(configureOptions: options =>
+        {
+            options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
+        });
 
         siloBuilder.UseInMemoryReminderService();
 
@@ -32,12 +43,10 @@ await Host.CreateDefaultBuilder(args)
         //    builder.SetMinimumLevel(LogLevel.Information);    
         //});
 
-        siloBuilder.UseLocalhostClustering(siloPort: 30000, gatewayPort: 30001);
-
-        //Configure the Analytics Service DI inside a Silo running outside ASP.NET 
+        //Configure the Compliance Service DI inside a Silo running outside ASP.NET 
         siloBuilder.ConfigureServices(services =>
         {
-            services.AddSingleton<IAnalyticsService, AnalyticsService>();
+            services.AddSingleton<IComplianceService, ComplianceService>();
         });
     })
     .RunConsoleAsync();
