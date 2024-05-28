@@ -8,7 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseOrleansClient((context, client) =>
 {
-    client.UseLocalhostClustering(gatewayPort: 30001);
+    client.UseAzureStorageClustering(configureOptions: options =>
+    {
+        options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
+    });
 
     client.Configure<ClusterOptions>(options =>
     {
@@ -97,6 +100,17 @@ app.MapPost("checkingaccount/{checkingAccountId}/reccuringPayment", async (
 
         return TypedResults.NoContent();
     });
+
+app.MapGet("atm/{atmId}/balance", async (
+    Guid atmId,
+    IClusterClient clusterClient) =>
+{
+    var atmGrain = clusterClient.GetGrain<IAtmGrain>(atmId);
+
+    var balance = await atmGrain.Balance();
+
+    return TypedResults.Ok(balance);
+});
 
 app.MapPost("atm", async (
     CreateAtm createAtm,

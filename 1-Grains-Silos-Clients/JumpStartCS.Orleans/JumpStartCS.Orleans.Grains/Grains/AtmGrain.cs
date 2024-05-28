@@ -9,7 +9,7 @@ namespace JumpStartCS.Orleans.Grains
         private readonly IPersistentState<AtmState> _atmState;
 
         public AtmGrain(
-            [PersistentState("atm", "tableStorage")] IPersistentState<AtmState> atmState)
+            [PersistentState("atm", "globallyDistributedStorage")] IPersistentState<AtmState> atmState)
         {
             _atmState = atmState;
         }
@@ -39,6 +39,11 @@ namespace JumpStartCS.Orleans.Grains
             await checkingAccount.Debit(amount);
 
             await _atmState.WriteStateAsync();
+        }
+
+        public async Task<decimal> Balance()
+        {
+            return _atmState.State.Balance;
         }
     }
 }

@@ -5,5 +5,7 @@
         Task Initialise(decimal openingBalance);
 
         Task Withdraw(Guid checkingAccountId, decimal amount);
+
+        Task<decimal> Balance();
     }
 }

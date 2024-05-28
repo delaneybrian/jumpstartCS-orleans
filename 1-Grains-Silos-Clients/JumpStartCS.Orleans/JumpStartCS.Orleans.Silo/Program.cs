@@ -1,12 +1,17 @@
-﻿using JumpStartCS.Orleans.Infrastructure;
+﻿using System.Text.Json;
+using JumpStartCS.Orleans.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans.Configuration;
+using Orleans.Serialization;
 
 await Host.CreateDefaultBuilder(args)
     .UseOrleans(siloBuilder =>
     {
-        siloBuilder.UseLocalhostClustering(siloPort: 30000, gatewayPort: 30001);
+        siloBuilder.UseAzureStorageClustering(configureOptions: options =>
+        {
+            options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
+        });
 
         siloBuilder.Configure<ClusterOptions> (options =>
                     {
@@ -22,10 +27,15 @@ await Host.CreateDefaultBuilder(args)
             options.CollectionAge = TimeSpan.FromSeconds(30);
         });
 
-        siloBuilder.AddMemoryGrainStorage(name: "memoryStorage");
+        siloBuilder.AddAzureTableGrainStorage(
+            name: "globallyDistributedStorage",
+            configureOptions: options =>
+            {
+                options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
+            });
 
         siloBuilder.AddAzureTableGrainStorage(
-            name: "tableStorage",
+            name: "locallyDistributedStorage",
             configureOptions: options =>
             {
                 options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
@@ -36,12 +46,21 @@ await Host.CreateDefaultBuilder(args)
             options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
         });
 
-        siloBuilder.UseInMemoryReminderService();
+        siloBuilder.UseAzureTableReminderService(configureOptions: options =>
+        {
+            options.Configure(o => o.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;"));
+        });
 
         //siloBuilder.ConfigureLogging(builder => {
 
         //    builder.SetMinimumLevel(LogLevel.Information);    
         //});
+
+        //Option to add json serialization for all type this is just really for inter grain comms
+        siloBuilder.Services.AddSerializer(builder =>
+        {
+            builder.AddJsonSerializer(isSupported: type => true);
+        });
 
         //Configure the Compliance Service DI inside a Silo running outside ASP.NET 
         siloBuilder.ConfigureServices(services =>

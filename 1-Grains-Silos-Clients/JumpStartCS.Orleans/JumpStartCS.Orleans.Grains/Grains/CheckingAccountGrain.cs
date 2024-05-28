@@ -11,8 +11,8 @@ namespace JumpStartCS.Orleans.Grains
         private readonly IPersistentState<BalanceState> _balanceState;
 
         public CheckingAccountGrain(
-            [PersistentState("checkingAccount", "tableStorage")] IPersistentState<CheckingAccountState> checkingAccountState,
-            [PersistentState("balance", "memoryStorage")] IPersistentState<BalanceState> balanceState)
+            [PersistentState("checkingAccount", "locallyDistributedStorage")] IPersistentState<CheckingAccountState> checkingAccountState,
+            [PersistentState("balance", "globallyDistributedStorage")] IPersistentState<BalanceState> balanceState)
         {
             _checkingAccountState = checkingAccountState;
             _balanceState = balanceState;
@@ -51,7 +51,7 @@ namespace JumpStartCS.Orleans.Grains
             });
 
             await this.RegisterOrUpdateReminder(
-                $"{ReccuringPaymentReminderPrepender}-{paymentId}", 
+                $"{ReccuringPaymentReminderPrepender}:::{paymentId}", 
                 TimeSpan.FromMinutes(reccursEveryMinutes), 
                 TimeSpan.FromMinutes(reccursEveryMinutes));
 
@@ -62,7 +62,7 @@ namespace JumpStartCS.Orleans.Grains
         {
             if (reminderName.StartsWith(ReccuringPaymentReminderPrepender))
             {
-                var recurringPaymentId = Guid.Parse(reminderName.Split('-').Last());
+                var recurringPaymentId = Guid.Parse(reminderName.Split(":::").Last());
 
                 var recurringPayment = _balanceState.State.RecurringPayments
                     .Single(x => x.Id == recurringPaymentId);
