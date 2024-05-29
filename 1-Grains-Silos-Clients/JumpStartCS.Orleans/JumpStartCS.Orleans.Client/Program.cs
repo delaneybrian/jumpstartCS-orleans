@@ -2,7 +2,6 @@ using JumpStartCS.Orleans.Client.Contracts;
 using JumpStartCS.Orleans.Grains;
 using JumpStartCS.Orleans.Grains.Abstractions;
 using JumpStartCS.Orleans.Infrastructure;
-using Microsoft.CodeAnalysis.Differencing;
 using Orleans.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,8 +18,8 @@ builder.Host.UseOrleansClient((context, client) =>
         options.ClusterId = "JumpstartCSCluster";
         options.ServiceId = "JumpstartCSService";
     });
-
     client.UseTransactions();
+
 });
 
 //Add if we want to use analytics service in a ASP.NET hosted silo
@@ -164,6 +163,29 @@ app.MapPost("atm/{atmId}/withdrawl", async (
             await atmGrain.Withdraw(atmWithdrawl.WithdrawlAmount);
             await checkingAccountGrain.Debit(atmWithdrawl.WithdrawlAmount);
         });
+
+    return TypedResults.NoContent();
+});
+
+app.MapGet("customer/{customerId}/networth", async (
+    Guid customerId,
+    IClusterClient clusterClient) =>
+{
+    var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+
+    var netWorth = await customerGrain.GetNetWorth();
+
+    return TypedResults.Ok(netWorth);
+});
+
+app.MapPost("customer/{customerId}/checkingaccount", async (
+    Guid customerId,
+    CustomerCheckingAccount customerCheckingAccount,
+    IClusterClient clusterClient) =>
+{
+    var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
+
+    await customerGrain.AddCheckingAccount(customerCheckingAccount.CheckingAccountId);
 
     return TypedResults.NoContent();
 });

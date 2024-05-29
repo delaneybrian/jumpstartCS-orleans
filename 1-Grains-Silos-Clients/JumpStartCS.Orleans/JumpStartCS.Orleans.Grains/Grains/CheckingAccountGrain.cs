@@ -1,4 +1,5 @@
-﻿using JumpStartCS.Orleans.Grains.State;
+﻿using JumpStartCS.Orleans.Grains.Events;
+using JumpStartCS.Orleans.Grains.State;
 using Orleans.Concurrency;
 using Orleans.Runtime;
 using Orleans.Transactions.Abstractions;
@@ -101,6 +102,20 @@ namespace JumpStartCS.Orleans.Grains
                state.Transactions.Add(transaction);
 
                state.CurrentBalance = currentBalance + creditAmount;
+            });
+
+            var balance = await GetBalance();
+
+            var streamProvider = this.GetStreamProvider("StreamProvider");
+
+            var streamId = StreamId.Create("BalanceChange", this.GetGrainId().GetGuidKey());
+
+            var stream = streamProvider.GetStream<BalanceChangeEvent>(streamId);
+
+            await stream.OnNextAsync(new BalanceChangeEvent
+            {
+                AccountId = this.GetGrainId().GetGuidKey(),
+                Balance = balance
             });
         }
 

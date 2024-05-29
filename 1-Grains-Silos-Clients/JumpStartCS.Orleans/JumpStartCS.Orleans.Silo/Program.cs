@@ -1,7 +1,13 @@
-﻿using JumpStartCS.Orleans.Infrastructure;
+﻿using Azure.Storage.Queues;
+using JumpStartCS.Orleans.Infrastructure;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.Hosting;
+using Orleans.Providers.Streams.AzureQueue;
+using System.Net.Http;
 
 await Host.CreateDefaultBuilder(args)
     .UseOrleans(siloBuilder =>
@@ -47,5 +53,14 @@ await Host.CreateDefaultBuilder(args)
         });
 
         siloBuilder.UseTransactions();
+
+        siloBuilder.AddAzureQueueStreams("StreamProvider", optionsBuilder =>
+        {
+            optionsBuilder.Configure(options => { options.QueueServiceClient = new QueueServiceClient("UseDevelopmentStorage=true"); });
+        })
+        .AddAzureTableGrainStorage("PubSubStore", configureOptions: options =>
+        {
+            options.Configure(o => o.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;"));
+        });
     })
     .RunConsoleAsync();
