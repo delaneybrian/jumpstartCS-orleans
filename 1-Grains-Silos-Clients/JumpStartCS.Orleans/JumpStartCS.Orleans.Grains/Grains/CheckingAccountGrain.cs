@@ -1,21 +1,27 @@
 ﻿using JumpStartCS.Orleans.Grains.State;
+using Orleans.Concurrency;
 using Orleans.Runtime;
+using Orleans.Transactions.Abstractions;
 
 namespace JumpStartCS.Orleans.Grains
 {
+    [Reentrant]
     public class CheckingAccountGrain : Grain, ICheckingAccountGrain, IRemindable
     {
         private const string ReccuringPaymentReminderPrepender = "ReccuringPayment";
 
         private readonly IPersistentState<CheckingAccountState> _checkingAccountState;
-        private readonly IPersistentState<BalanceState> _balanceState;
+        private readonly ITransactionalState<BalanceState> _transactionalBalanceState;
+        private readonly ITransactionClient _transactionClient;
 
         public CheckingAccountGrain(
-            [PersistentState("checkingAccount", "locallyDistributedStorage")] IPersistentState<CheckingAccountState> checkingAccountState,
-            [PersistentState("balance", "globallyDistributedStorage")] IPersistentState<BalanceState> balanceState)
+            [PersistentState("checkingAccount")] IPersistentState<CheckingAccountState> checkingAccountState,
+            [TransactionalState("balance")] ITransactionalState<BalanceState> transactionalBalanceState,
+            ITransactionClient transactionClient)
         {
             _checkingAccountState = checkingAccountState;
-            _balanceState = balanceState;
+            _transactionalBalanceState = transactionalBalanceState;
+            _transactionClient = transactionClient;
         }
 
         public async Task Initialise(decimal openingBalance, Guid customerId)
@@ -28,13 +34,12 @@ namespace JumpStartCS.Orleans.Grains
                 OpenedAtUtc = DateTime.UtcNow
             };
 
-            _balanceState.State = new BalanceState
+            await _transactionalBalanceState.PerformUpdate(state =>
             {
-                CurrentBalance = openingBalance,
-            };
+                state.CurrentBalance = openingBalance;
+            });
 
             await _checkingAccountState.WriteStateAsync();
-            await _balanceState.WriteStateAsync();
         }
 
         public async Task ScheduleRecurringPayment(Guid paymentId, decimal paymentAmount, int reccursEveryMinutes)
@@ -42,20 +47,18 @@ namespace JumpStartCS.Orleans.Grains
             if (paymentAmount < 0)
                 throw new ArgumentException("recurring payments must be greater than 0");
 
-            var recurringPayments = _balanceState.State.RecurringPayments;
+            _checkingAccountState.State.RecurringPayments.Add(new RecurringPayment
+                {
+                    Id = paymentId,
+                    PaymentAmount = paymentAmount,
+                });
 
-            recurringPayments.Add(new RecurringPayment
-            {
-                Id = paymentId,
-                PaymentAmount = paymentAmount,
-            });
+            await _checkingAccountState.WriteStateAsync();
 
             await this.RegisterOrUpdateReminder(
                 $"{ReccuringPaymentReminderPrepender}:::{paymentId}", 
                 TimeSpan.FromMinutes(reccursEveryMinutes), 
                 TimeSpan.FromMinutes(reccursEveryMinutes));
-
-            await _balanceState.WriteStateAsync();
         }
 
         public async Task ReceiveReminder(string reminderName, TickStatus status)
@@ -64,65 +67,66 @@ namespace JumpStartCS.Orleans.Grains
             {
                 var recurringPaymentId = Guid.Parse(reminderName.Split(":::").Last());
 
-                var recurringPayment = _balanceState.State.RecurringPayments
-                    .Single(x => x.Id == recurringPaymentId);
+                var recurringPayment =  _checkingAccountState.State.RecurringPayments
+                        .Single(x => x.Id == recurringPaymentId);
 
-                await Debit(recurringPayment.PaymentAmount);
-            }   
+                await _transactionClient.RunTransaction(TransactionOption.Create, async () =>
+                {
+                     await Debit(recurringPayment.PaymentAmount);
+                });
+            }
         }
 
         public async Task<decimal> GetBalance()
         {
-            return _balanceState.State.CurrentBalance;
+            return await _transactionalBalanceState.PerformRead(state => state.CurrentBalance);
         }
 
         public async Task Credit(decimal creditAmount)
         {
-            var currentBalance = _balanceState.State.CurrentBalance;
-
-            if (creditAmount < 0)
-                throw new ArgumentException("credits must be greater than 0");
-
-            var transaction = new Transaction
+            await _transactionalBalanceState.PerformUpdate(state =>
             {
-                Id = Guid.NewGuid(),
-                TransactionAmount = creditAmount,
-                TransactionDateTimeUtc = DateTime.UtcNow,
-            };
+                var currentBalance = state.CurrentBalance;
 
-            _balanceState.State.Transactions.Add(transaction);
+                if (creditAmount < 0)
+                    throw new ArgumentException("credits must be greater than 0");
 
-            var newBalance = currentBalance + creditAmount;
+                var transaction = new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    TransactionAmount = creditAmount,
+                    TransactionDateTimeUtc = DateTime.UtcNow,
+                };
 
-            _balanceState.State = _balanceState.State with { CurrentBalance = newBalance };
+               state.Transactions.Add(transaction);
 
-            await _balanceState.WriteStateAsync();
+               state.CurrentBalance = currentBalance + creditAmount;
+            });
         }
 
         public async Task Debit(decimal debitAmount)
         {
-            var currentBalance = _balanceState.State.CurrentBalance;
-
-            if (debitAmount < 0)
-                throw new ArgumentException("debits must be greater than 0");
-
-            if (_balanceState.State.CurrentBalance < debitAmount)
-                throw new ArgumentException("debit amount exceeds balance");
-
-            var transaction = new Transaction
+            await _transactionalBalanceState.PerformUpdate(state =>
             {
-                Id = Guid.NewGuid(),
-                TransactionAmount = debitAmount,
-                TransactionDateTimeUtc = DateTime.UtcNow,
-            };
+                var currentBalance = state.CurrentBalance;
 
-            _balanceState.State.Transactions.Add(transaction);
+                if (debitAmount < 0)
+                    throw new ArgumentException("debits must be greater than 0");
 
-            var newBalance = currentBalance - debitAmount;
+                if (state.CurrentBalance < debitAmount)
+                    throw new ArgumentException("debit amount exceeds balance");
 
-            _balanceState.State = _balanceState.State with { CurrentBalance = newBalance };
+                var transaction = new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    TransactionAmount = debitAmount,
+                    TransactionDateTimeUtc = DateTime.UtcNow,
+                };
 
-            await _balanceState.WriteStateAsync();
+                state.Transactions.Add(transaction);
+
+                state.CurrentBalance = currentBalance - debitAmount;
+            });
         }
     }
 }

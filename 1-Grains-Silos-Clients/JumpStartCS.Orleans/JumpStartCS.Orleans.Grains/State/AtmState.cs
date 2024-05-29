@@ -1,14 +1,12 @@
-﻿using System.Runtime.Serialization;
-
-namespace JumpStartCS.Orleans.Grains.State
+﻿namespace JumpStartCS.Orleans.Grains.State
 {
-    [DataContract]
+    [GenerateSerializer]
     public record AtmState
     {
-        [DataMember]
-        public Guid Id { get; init; }
+        [Id(0)]
+        public Guid Id { get; set; }
 
-        [DataMember]
-        public decimal Balance { get; init; }
+        [Id(1)]
+        public decimal Balance { get; set; }
     }
 }

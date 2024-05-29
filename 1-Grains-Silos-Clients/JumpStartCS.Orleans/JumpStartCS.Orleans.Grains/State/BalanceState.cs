@@ -1,17 +1,12 @@
-﻿using System.Runtime.Serialization;
-
-namespace JumpStartCS.Orleans.Grains.State
+﻿namespace JumpStartCS.Orleans.Grains.State
 {
-    [DataContract]
-    public record BalanceState
+    [GenerateSerializer]
+    public record class BalanceState
     {
-        [DataMember]
-        public decimal CurrentBalance { get; init; }
+        [Id(0)]
+        public decimal CurrentBalance { get; set; }
 
-        [DataMember]
-        public ICollection<Transaction> Transactions { get; init; } = new List<Transaction>();
-
-        [DataMember]
-        public ICollection<RecurringPayment> RecurringPayments { get; init; } = new List<RecurringPayment>();
+        [Id(1)]
+        public List<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }

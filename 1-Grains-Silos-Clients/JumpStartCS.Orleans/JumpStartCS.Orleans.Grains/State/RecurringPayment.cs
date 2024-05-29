@@ -1,14 +1,12 @@
-﻿using System.Runtime.Serialization;
-
-namespace JumpStartCS.Orleans.Grains.State
+﻿namespace JumpStartCS.Orleans.Grains.State
 {
-    [DataContract]
+    [GenerateSerializer]
     public record RecurringPayment
     {
-        [DataMember]
-        public Guid Id { get; init; }
+        [Id(0)]
+        public Guid Id { get; set; }
 
-        [DataMember]
-        public decimal PaymentAmount { get; init; }
+        [Id(1)]
+        public decimal PaymentAmount { get; set; }
     }
 }

@@ -16,6 +16,8 @@
     <PackageReference Include="Microsoft.Orleans.Runtime" Version="8.1.0" />
     <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="8.1.0" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Orleans.Transactions" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Orleans.Transactions.AzureStorage" Version="8.1.0" />
   </ItemGroup>
 
   <ItemGroup>

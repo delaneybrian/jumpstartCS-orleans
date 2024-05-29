@@ -1,49 +1,47 @@
 ﻿using JumpStartCS.Orleans.Grains.Abstractions;
 using JumpStartCS.Orleans.Grains.State;
-using Orleans.Runtime;
+using Orleans.Concurrency;
+using Orleans.Transactions.Abstractions;
 
 namespace JumpStartCS.Orleans.Grains
 {
+    [Reentrant]
     public class AtmGrain : Grain, IAtmGrain
     {
-        private readonly IPersistentState<AtmState> _atmState;
+        private readonly ITransactionalState<AtmState> _atmState;
 
         public AtmGrain(
-            [PersistentState("atm", "globallyDistributedStorage")] IPersistentState<AtmState> atmState)
+            [TransactionalState("atm")] ITransactionalState<AtmState> atmState)
         {
             _atmState = atmState;
         }
 
         public async Task Initialise(decimal openingBalance)
         {
-            _atmState.State = new AtmState
+            await _atmState.PerformUpdate(state =>
             {
-                Id = this.GetPrimaryKey(),
-                Balance = openingBalance,
-            };
-
-            await _atmState.WriteStateAsync();
+                state.Id = this.GetPrimaryKey();
+                state.Balance = openingBalance;
+            });
         }
 
-        public async Task Withdraw(Guid checkingAccountId, decimal amount)
+        [Transaction(TransactionOption.Create)]
+        public async Task Withdraw(decimal amount)
         {
-            var currentAtmBalance = _atmState.State.Balance;
+            await _atmState.PerformUpdate(state =>
+            {
+                var currentAtmBalance = state.Balance;
 
-            if (currentAtmBalance < amount)
-                throw new ArgumentException("withdrawl amount greater than ATM balance");
+                if (currentAtmBalance < amount)
+                    throw new ArgumentException("withdrawl amount greater than ATM balance");
 
-            _atmState.State = _atmState.State with { Balance = currentAtmBalance - amount };
-
-            var checkingAccount = GrainFactory.GetGrain<ICheckingAccountGrain>(checkingAccountId);
-
-            await checkingAccount.Debit(amount);
-
-            await _atmState.WriteStateAsync();
+                state.Balance = currentAtmBalance - amount;
+            });
         }
 
         public async Task<decimal> Balance()
         {
-            return _atmState.State.Balance;
+            return await _atmState.PerformRead(atmState => atmState.Balance);
         }
     }
 }

@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Orleans.Client" Version="8.1.0" />
     <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="8.1.0" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Orleans.Transactions" Version="8.1.0" />
   </ItemGroup>
 
   <ItemGroup>

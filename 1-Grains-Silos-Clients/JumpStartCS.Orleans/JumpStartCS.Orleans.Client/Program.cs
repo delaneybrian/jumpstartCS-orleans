@@ -2,6 +2,7 @@ using JumpStartCS.Orleans.Client.Contracts;
 using JumpStartCS.Orleans.Grains;
 using JumpStartCS.Orleans.Grains.Abstractions;
 using JumpStartCS.Orleans.Infrastructure;
+using Microsoft.CodeAnalysis.Differencing;
 using Orleans.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,8 @@ builder.Host.UseOrleansClient((context, client) =>
         options.ClusterId = "JumpstartCSCluster";
         options.ServiceId = "JumpstartCSService";
     });
+
+    client.UseTransactions();
 });
 
 //Add if we want to use analytics service in a ASP.NET hosted silo
@@ -40,24 +43,33 @@ var app = builder.Build();
 
 app.MapGet("checkingaccount/{checkingAccountId}/balance", async (
     Guid checkingAccountId,
-    IClusterClient clusterClient) => {
+    IClusterClient clusterClient,
+    ITransactionClient transactionClinet) => {
 
         var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-        var balance = await checkingAccountGrain.GetBalance();
+        decimal balance = 0;
+        await transactionClinet.RunTransaction(TransactionOption.Create, async () =>
+        {
+            balance = await checkingAccountGrain.GetBalance();
+        });
 
         return TypedResults.Ok(balance);
     });
 
 app.MapPost("checkingaccount", async (
     CreateAccount createAccount,
-    IClusterClient clusterClient) => {
+    IClusterClient clusterClient,
+    ITransactionClient transactionClinet) => {
 
         var checkingAccountId = Guid.NewGuid();
 
         var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-        await checkingAccountGrain.Initialise(createAccount.OpeningBalance, createAccount.CustomerId);
+        await transactionClinet.RunTransaction(TransactionOption.Create, async () =>
+        {
+            await checkingAccountGrain.Initialise(createAccount.OpeningBalance, createAccount.CustomerId); 
+        });
 
         return TypedResults.Created($"checkingAccount/{checkingAccountId}", checkingAccountId);
     });
@@ -65,11 +77,15 @@ app.MapPost("checkingaccount", async (
 app.MapPost("checkingaccount/{checkingAccountId}/debit", async (
     Guid checkingAccountId,
     Debit debit,
-    IClusterClient clusterClient) => {
+    IClusterClient clusterClient,
+    ITransactionClient transactionClinet) => {
 
         var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-        await checkingAccountGrain.Debit(debit.Amount);
+        await transactionClinet.RunTransaction(TransactionOption.Create, async () =>
+        {
+            await checkingAccountGrain.Debit(debit.Amount);
+        });
 
         return TypedResults.NoContent();
     });
@@ -77,11 +93,15 @@ app.MapPost("checkingaccount/{checkingAccountId}/debit", async (
 app.MapPost("checkingaccount/{checkingAccountId}/credit", async (
     Guid checkingAccountId, 
     Credit credit, 
-    IClusterClient clusterClient) => {
+    IClusterClient clusterClient,
+    ITransactionClient transactionClinet) => {
 
         var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
 
-        await checkingAccountGrain.Credit(credit.Amount);
+        await transactionClinet.RunTransaction(TransactionOption.Create, async () =>
+        {
+            await checkingAccountGrain.Credit(credit.Amount);
+        });
 
         return TypedResults.NoContent();
 });
@@ -114,13 +134,17 @@ app.MapGet("atm/{atmId}/balance", async (
 
 app.MapPost("atm", async (
     CreateAtm createAtm,
-    IClusterClient clusterClient) =>
+    IClusterClient clusterClient,
+    ITransactionClient transactionClinet) =>
 {
     var atmId = Guid.NewGuid();
 
     var atmGrain = clusterClient.GetGrain<IAtmGrain>(atmId);
 
-    await atmGrain.Initialise(createAtm.OpeningBalance);
+    await transactionClinet.RunTransaction(TransactionOption.Create, async () =>
+    {
+        await atmGrain.Initialise(createAtm.OpeningBalance);
+    });
 
     return TypedResults.Created($"atm/{atmId}", atmId);
 });
@@ -128,11 +152,18 @@ app.MapPost("atm", async (
 app.MapPost("atm/{atmId}/withdrawl", async (
     Guid atmId,
     AtmWithdrawl atmWithdrawl,
-    IClusterClient clusterClient) =>
+    IClusterClient clusterClient,
+    ITransactionClient transactionClinet) =>
 {
     var atmGrain = clusterClient.GetGrain<IAtmGrain>(atmId);
+    var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(atmWithdrawl.CheckingAccountId);
 
-    await atmGrain.Withdraw(atmWithdrawl.CheckingAccountId, atmWithdrawl.WithdrawlAmount);
+    await transactionClinet.RunTransaction(TransactionOption.Create,
+        async () =>
+        {
+            await atmGrain.Withdraw(atmWithdrawl.WithdrawlAmount);
+            await checkingAccountGrain.Debit(atmWithdrawl.WithdrawlAmount);
+        });
 
     return TypedResults.NoContent();
 });

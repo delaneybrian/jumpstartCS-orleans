@@ -2,10 +2,13 @@
 {
     public interface IAtmGrain : IGrainWithGuidKey
     {
+        [Transaction(TransactionOption.Create)]
         Task Initialise(decimal openingBalance);
 
-        Task Withdraw(Guid checkingAccountId, decimal amount);
+        [Transaction(TransactionOption.CreateOrJoin)]
+        Task Withdraw(decimal amount);
 
+        [Transaction(TransactionOption.Create)]
         Task<decimal> Balance();
     }
 }
