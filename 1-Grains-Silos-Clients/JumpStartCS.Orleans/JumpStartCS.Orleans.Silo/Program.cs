@@ -1,13 +1,10 @@
 ﻿using Azure.Storage.Queues;
+using JumpStartCS.Orleans.Grains.Filters;
 using JumpStartCS.Orleans.Infrastructure;
-using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
-using Orleans.Hosting;
-using Orleans.Providers.Streams.AzureQueue;
-using System.Net.Http;
 
 await Host.CreateDefaultBuilder(args)
     .UseOrleans(siloBuilder =>
@@ -17,7 +14,7 @@ await Host.CreateDefaultBuilder(args)
             options.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;");
         });
 
-        siloBuilder.Configure<ClusterOptions> (options =>
+        siloBuilder.Configure<ClusterOptions>(options =>
                     {
                         options.ClusterId = "JumpstartCSCluster";
                         options.ServiceId = "JumpstartCSService";
@@ -62,5 +59,8 @@ await Host.CreateDefaultBuilder(args)
         {
             options.Configure(o => o.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;"));
         });
-    })
-    .RunConsoleAsync();
+
+        siloBuilder.AddIncomingGrainCallFilter<LoggingIncomingGrainCallFilter>();
+
+        siloBuilder.Services.AddLogging();
+    }).RunConsoleAsync();

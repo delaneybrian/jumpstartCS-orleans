@@ -1,6 +1,7 @@
 using JumpStartCS.Orleans.Client.Contracts;
 using JumpStartCS.Orleans.Grains;
 using JumpStartCS.Orleans.Grains.Abstractions;
+using JumpStartCS.Orleans.Grains.Filters;
 using JumpStartCS.Orleans.Infrastructure;
 using Orleans.Configuration;
 
@@ -20,6 +21,7 @@ builder.Host.UseOrleansClient((context, client) =>
     });
     client.UseTransactions();
 
+    client.AddOutgoingGrainCallFilter<LoggingOutgoingGrainCallFilter>();
 });
 
 //Add if we want to use analytics service in a ASP.NET hosted silo
