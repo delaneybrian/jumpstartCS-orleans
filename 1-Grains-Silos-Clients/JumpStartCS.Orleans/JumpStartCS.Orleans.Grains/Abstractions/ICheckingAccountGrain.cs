@@ -1,4 +1,4 @@
-﻿using Orleans.Transactions.Abstractions;
+﻿using Orleans.Concurrency;
 
 namespace JumpStartCS.Orleans.Grains
 {
@@ -18,5 +18,10 @@ namespace JumpStartCS.Orleans.Grains
 
         [Transaction(TransactionOption.CreateOrJoin)]
         Task Debit(decimal debitAmount);
+
+        Task CancellableWork(GrainCancellationToken grainCancellationToken, long workDurationSeconds);
+
+        [OneWay]
+        Task FireAndForgetWork();
     }
 }

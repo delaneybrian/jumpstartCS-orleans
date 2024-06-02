@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace JumpStartCS.Orleans.Grains.Events
+﻿namespace JumpStartCS.Orleans.Grains.Events
 {
     [GenerateSerializer]
     public record BalanceChangeEvent

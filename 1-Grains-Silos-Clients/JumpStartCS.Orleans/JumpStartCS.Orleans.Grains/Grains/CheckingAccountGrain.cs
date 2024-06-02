@@ -143,5 +143,27 @@ namespace JumpStartCS.Orleans.Grains
                 state.CurrentBalance = currentBalance - debitAmount;
             });
         }
+
+        public async Task CancellableWork(GrainCancellationToken grainCancellationToken, long workDurationSeconds)
+        {
+            try
+            {
+                while (!grainCancellationToken.CancellationToken.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(workDurationSeconds), grainCancellationToken.CancellationToken);
+                }
+            }
+            catch (TaskCanceledException _)
+            {
+                return;
+            }       
+        }
+
+        public async Task FireAndForgetWork()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            throw new NotSupportedException("This is actually not supported");
+        }
     }
 }

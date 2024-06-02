@@ -122,6 +122,39 @@ app.MapPost("checkingaccount/{checkingAccountId}/reccuringPayment", async (
         return TypedResults.NoContent();
     });
 
+app.MapPost("checkingaccount/{checkingAccountId}/cancellablework", async (
+    Guid checkingAccountId,
+    IClusterClient clusterClient) =>
+{
+    var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
+
+    var grainCancellationTokenSource = new GrainCancellationTokenSource();
+
+    var grainCallTask = checkingAccountGrain.CancellableWork(grainCancellationTokenSource.Token, 20);
+
+    var cancelWorkTask = async () =>
+    {
+        await Task.Delay(TimeSpan.FromSeconds(4));
+
+        await grainCancellationTokenSource.Cancel();
+    };
+
+    await Task.WhenAll(grainCallTask, cancelWorkTask());
+
+    return TypedResults.NoContent();
+});
+
+app.MapPost("checkingaccount/{checkingAccountId}/fireandforgetwork", async (
+    Guid checkingAccountId,
+    IClusterClient clusterClient) =>
+{
+    var checkingAccountGrain = clusterClient.GetGrain<ICheckingAccountGrain>(checkingAccountId);
+
+    await checkingAccountGrain.FireAndForgetWork();
+
+    return TypedResults.NoContent();
+});
+
 app.MapGet("atm/{atmId}/balance", async (
     Guid atmId,
     IClusterClient clusterClient) =>
