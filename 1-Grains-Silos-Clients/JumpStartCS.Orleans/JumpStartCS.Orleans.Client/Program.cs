@@ -4,6 +4,7 @@ using JumpStartCS.Orleans.Grains.Abstractions;
 using JumpStartCS.Orleans.Grains.Filters;
 using JumpStartCS.Orleans.Infrastructure;
 using Orleans.Configuration;
+using System.Security.Cryptography.Xml;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -221,6 +222,17 @@ app.MapPost("customer/{customerId}/checkingaccount", async (
     var customerGrain = clusterClient.GetGrain<ICustomerGrain>(customerId);
 
     await customerGrain.AddCheckingAccount(customerCheckingAccount.CheckingAccountId);
+
+    return TypedResults.NoContent();
+});
+
+app.MapPost("transfer", async (
+    Transfer transfer,
+    IClusterClient clusterClient) =>
+{
+    var statelessTransferProcessingGrain = clusterClient.GetGrain<IStatlessTransferProcessingGrain>(0);
+
+    await statelessTransferProcessingGrain.ProcessTransfer(transfer.FromAccountId, transfer.ToAccountId, transfer.Amount);
 
     return TypedResults.NoContent();
 });

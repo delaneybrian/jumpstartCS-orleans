@@ -4,7 +4,6 @@ using System.Runtime.Serialization;
 namespace JumpStartCS.Orleans.Grains
 {
     [GenerateSerializer]
-    [DataContract]
     public record CheckingAccountState
     {
         [DataMember]
