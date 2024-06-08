@@ -2,7 +2,6 @@ using JumpStartCS.Orleans.Client.Contracts;
 using JumpStartCS.Orleans.Grains;
 using JumpStartCS.Orleans.Grains.Abstractions;
 using JumpStartCS.Orleans.Grains.Filters;
-using JumpStartCS.Orleans.Infrastructure;
 using Orleans.Configuration;
 using System.Security.Cryptography.Xml;
 
@@ -24,9 +23,6 @@ builder.Host.UseOrleansClient((context, client) =>
 
     client.AddOutgoingGrainCallFilter<LoggingOutgoingGrainCallFilter>();
 });
-
-//Add if we want to use analytics service in a ASP.NET hosted silo
-builder.Services.AddSingleton<IComplianceService, ComplianceService>();
 
 //builder.Host.UseOrleans(siloBuilder =>
 //{

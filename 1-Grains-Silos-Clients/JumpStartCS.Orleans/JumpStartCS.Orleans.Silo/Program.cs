@@ -1,6 +1,5 @@
 ﻿using Azure.Storage.Queues;
 using JumpStartCS.Orleans.Grains.Filters;
-using JumpStartCS.Orleans.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -41,12 +40,6 @@ await Host.CreateDefaultBuilder(args)
         siloBuilder.UseAzureTableReminderService(configureOptions: options =>
         {
             options.Configure(o => o.TableServiceClient = new Azure.Data.Tables.TableServiceClient("UseDevelopmentStorage=true;"));
-        });
-
-        //Configure the Compliance Service DI inside a Silo running outside ASP.NET 
-        siloBuilder.ConfigureServices(services =>
-        {
-            services.AddSingleton<IComplianceService, ComplianceService>();
         });
 
         siloBuilder.UseTransactions();

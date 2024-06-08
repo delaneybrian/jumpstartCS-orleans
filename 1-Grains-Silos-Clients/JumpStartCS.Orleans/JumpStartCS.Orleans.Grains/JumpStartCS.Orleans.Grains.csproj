@@ -15,8 +15,4 @@
     <PackageReference Include="Microsoft.Orleans.Transactions" Version="8.1.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\JumpStartCS.Orleans.Infrastructure\JumpStartCS.Orleans.Infrastructure.csproj" />
-  </ItemGroup>
-
 </Project>

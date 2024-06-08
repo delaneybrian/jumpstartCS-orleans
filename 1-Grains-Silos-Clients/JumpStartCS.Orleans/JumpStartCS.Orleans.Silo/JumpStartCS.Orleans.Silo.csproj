@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JumpStartCS.Orleans.Grains\JumpStartCS.Orleans.Grains.csproj" />
-    <ProjectReference Include="..\JumpStartCS.Orleans.Infrastructure\JumpStartCS.Orleans.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
